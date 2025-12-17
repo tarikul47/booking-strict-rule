@@ -115,8 +115,8 @@ jQuery(document).ready(function ($) {
 
     let diffDays = Math.ceil((endDate - startDate) / (1000 * 3600 * 24));
 
-    if (diffDays < 3) {
-      alert("Minimum booking is 4 calendar days.");
+    if (diffDays !== 3) {
+      alert("Booking must be for exactly 4 calendar days.");
       dropoffDateInput.val("");
       return;
     }
