@@ -1,4 +1,5 @@
 jQuery(document).ready(function ($) {
+  alert("mobile");
   if (typeof BOOKING_STRICT_RULE === "undefined") {
     return;
   }
@@ -11,34 +12,22 @@ jQuery(document).ready(function ($) {
   const dropoffMobileDatepicker = $("#drop-mobile-datepicker");
   const dropoffDateInput = $("#dropoff-date");
 
-  const DATE_FORMAT = "d/m/Y";
+  const DATE_FORMAT = "m/d/Y";
   let lastWarningDate = null;
 
   function parseDate(dateString) {
     if (!dateString) return null;
     let parts = dateString.split(/[/\-\. ]/);
-    if (parts.length < 3) return null;
-
-    let day = parseInt(parts[0], 10);
-    let month = parseInt(parts[1], 10) - 1;
+    let month = parseInt(parts[0], 10) - 1;
+    let day = parseInt(parts[1], 10);
     let year = parseInt(parts[2], 10);
-
-    if (isNaN(day) || isNaN(month) || isNaN(year)) {
-      return null;
-    }
-
     let date = new Date(year, month, day);
-
-    if (date.getFullYear() != year || date.getMonth() != month || date.getDate() != day) {
-        return null;
-    }
-
     date.setHours(0, 0, 0, 0);
     return date;
   }
 
   function formatDate(date) {
-    if (!date) return "";
+    if (!date) return null;
     let d = ("0" + date.getDate()).slice(-2);
     let m = ("0" + (date.getMonth() + 1)).slice(-2);
     let y = date.getFullYear();
@@ -65,9 +54,6 @@ jQuery(document).ready(function ($) {
     }
 
     let startDate = parseDate(startDateString);
-    if (!startDate) {
-      return;
-    }
     let isAvailable = true;
 
     for (let i = 1; i <= 3; i++) {
@@ -108,10 +94,6 @@ jQuery(document).ready(function ($) {
 
     let startDate = parseDate(startDateString);
     let endDate = parseDate(endDateString);
-
-    if (!startDate || !endDate) {
-      return;
-    }
 
     let diffDays = Math.ceil((endDate - startDate) / (1000 * 3600 * 24));
 

@@ -1,3 +1,7 @@
+/**
+ * Now days fixed 
+ */
+
 jQuery(document).ready(function ($) {
   if (typeof BOOKING_STRICT_RULE === "undefined") {
     return;
