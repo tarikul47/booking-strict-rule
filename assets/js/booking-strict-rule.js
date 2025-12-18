@@ -2,17 +2,19 @@ jQuery(document).ready(function ($) {
   // --- Popup Warning Modal ---
   const popupModal = `
     <div id="booking-warning-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10000;">
-      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; min-width: 300px;">
-        <p id="booking-warning-message" style="margin-bottom: 20px; font-size: 16px; color: #333;"></p>
-        <button id="booking-warning-close" style="background-color: #0073aa; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">OK</button>
+      <div style="max-width:45%;position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #fff; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); min-width: 400px; text-align: left;">
+        <h3 id="booking-warning-title" style="color: red; font-weight: bold; font-size: 20px; margin-top:0; margin-bottom: 15px;"></h3>
+        <div id="booking-warning-message-body"></div>
+        <button id="booking-warning-close" style="background-color: #2563EB; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold;">OK, Got it</button>
       </div>
     </div>
   `;
 
   $('body').append(popupModal);
 
-  function showPopupWarning(message) {
-    $('#booking-warning-message').text(message);
+  function showPopupWarning(details) {
+    $('#booking-warning-title').text(details.title);
+    $('#booking-warning-message-body').html(details.body);
     $('#booking-warning-popup').fadeIn();
   }
 
@@ -135,9 +137,17 @@ jQuery(document).ready(function ($) {
       if (startDateString === lastWarningDate) return;
 
       lastWarningDate = startDateString;
-      showPopupWarning(
-        "The next " + fixedBookingNights + " calendar days are not available. Please choose another pickup date."
-      );
+
+      const warningTitle = "Date Unavailable";
+      const warningBody = `
+        <div style="background-color: #f0f0f0; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+            <strong>Selected Date:</strong> ${startDateString}
+        </div>
+        <p style="margin: 0 0 10px 0; font-size: 14px;">Cannot select this collection date because there are unavailable next dates that prevent meeting the minimum ${currentBookingDays} consecutive days requirement.</p>
+        <p style="margin: 0; font-size: 14px;">Please select a different collection date that allows for ${currentBookingDays} consecutive available days.</p>
+      `;
+
+      showPopupWarning({title: warningTitle, body: warningBody});
 
       $("#pickup-date, #dropoff-date").val("");
       $(".booking-pricing-info").fadeOut();
@@ -176,7 +186,17 @@ jQuery(document).ready(function ($) {
     let diffDays = Math.ceil((endDate - startDate) / (1000 * 3600 * 24));
 
     if (diffDays !== fixedBookingNights) {
-      showPopupWarning("Booking must be for exactly " + currentBookingDays + " calendar days.");
+      const selectedDays = diffDays < 0 ? 0 : diffDays + 1;
+      const warningTitle = "Date Unavailable";
+      const warningBody = `
+        <div style="background-color: #f0f0f0; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+            <strong>Selected return date:</strong> ${end}
+        </div>
+        <p style="margin: 0 0 10px 0; font-size: 14px;">You must book exactly ${currentBookingDays} consecutive days. Your current selection only includes ${selectedDays} days.</p>
+        <p style="margin: 0; font-size: 14px;">Please select a return date that is exactly ${currentBookingDays} days after the pickup date.</p>
+      `;
+      showPopupWarning({title: warningTitle, body: warningBody});
+
       $("#dropoff-date").val("");
       $(".booking-pricing-info").hide();
       return;
