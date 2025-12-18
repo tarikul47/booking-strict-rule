@@ -73,16 +73,14 @@ class Booking_Strict_Rule
             'inventory_rules' => $inventory_rules,
         ];
 
-        print_r($booking_data);
-
         $script_handle = 'booking-strict-rule';
         $script_url = plugin_dir_url(__FILE__) . 'assets/js/booking-strict-rule.js';
-        
+
         if (wp_is_mobile()) {
             $script_handle = 'booking-strict-rule-mobile';
             $script_url = plugin_dir_url(__FILE__) . 'assets/js/booking-strict-rule-mobile.js';
         }
-        
+
         $script_path = plugin_dir_path(__FILE__) . str_replace(plugin_dir_url(__FILE__), '', $script_url);
         $version = file_exists($script_path) ? filemtime($script_path) : '1.0.0';
 
@@ -93,7 +91,7 @@ class Booking_Strict_Rule
             $version,
             true
         );
-        
+
         wp_localize_script($script_handle, 'BOOKING_STRICT_RULE', $booking_data);
     }
 
@@ -130,7 +128,8 @@ class Booking_Strict_Rule
         </p>
         <p>
             <label for="booking_strict_rule_days"><?php esc_html_e('Number of Days:', 'booking-strict-rule'); ?></label>
-            <input type="number" id="booking_strict_rule_days" name="booking_strict_rule_days" value="<?php echo esc_attr($days); ?>" min="1" />
+            <input type="number" id="booking_strict_rule_days" name="booking_strict_rule_days"
+                value="<?php echo esc_attr($days); ?>" min="1" />
         </p>
         <?php
     }

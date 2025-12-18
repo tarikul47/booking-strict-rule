@@ -1,39 +1,4 @@
 jQuery(document).ready(function ($) {
-  // --- Popup Warning Modal ---
-  const popupModal = `
-    <div id="booking-warning-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 99999999;">
-      <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #fff; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 90%; width:90%; text-align: left;">
-        <h3 id="booking-warning-title" style="color: red; font-weight: bold; font-size: 20px; margin-top:0; margin-bottom: 15px;"></h3>
-        <div id="booking-warning-message-body"></div>
-        <button id="booking-warning-close" style="background-color: #87CEEB; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold;">OK, Got it</button>
-      </div>
-    </div>
-  `;
-
-  $('body').append(popupModal);
-
-  function showPopupWarning(details) {
-    $('#booking-warning-title').text(details.title);
-    $('#booking-warning-message-body').html(details.body);
-    $('#booking-warning-popup').fadeIn();
-  }
-
-  function hidePopupWarning() {
-    $('#booking-warning-popup').fadeOut();
-  }
-
-  // Close popup when the close button or overlay is clicked
-  $('#booking-warning-close, #booking-warning-popup').on('click', function(e) {
-    if (e.target.id === 'booking-warning-close' || e.target.id === 'booking-warning-popup') {
-        hidePopupWarning();
-    }
-  });
-  // Prevent clicks inside the modal content from closing it
-  $('#booking-warning-popup > div').on('click', function(e) {
-    e.stopPropagation();
-  });
-
-
   if (typeof BOOKING_STRICT_RULE === "undefined" || !BOOKING_STRICT_RULE.inventory_rules) {
     return;
   }
@@ -140,17 +105,9 @@ jQuery(document).ready(function ($) {
     if (!isAvailable) {
       if (startDateString === lastWarningDate) return;
       lastWarningDate = startDateString;
-      
-      const warningTitle = "Date Unavailable";
-      const warningBody = `
-        <div style="background-color: #f0f0f0; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
-            <strong>Selected Date:</strong> ${startDateString}
-        </div>
-        <p style="margin: 0 0 10px 0; font-size: 14px;">Cannot select this collection date because there are unavailable next dates that prevent meeting the minimum ${currentBookingDays} consecutive days requirement.</p>
-        <p style="margin: 0; font-size: 14px;">Please select a different collection date that allows for ${currentBookingDays} consecutive available days.</p>
-      `;
-      showPopupWarning({title: warningTitle, body: warningBody});
-
+      alert(
+        "The next " + fixedBookingNights + " calendar days are not available. Please choose another pickup date."
+      );
       pickupDateInput.val("");
       dropoffDateInput.val("");
       return;
@@ -189,17 +146,7 @@ jQuery(document).ready(function ($) {
     let diffDays = Math.ceil((endDate - startDate) / (1000 * 3600 * 24));
 
     if (diffDays !== fixedBookingNights) {
-      const selectedDays = diffDays < 0 ? 0 : diffDays + 1;
-      const warningTitle = "Date Unavailable";
-      const warningBody = `
-        <div style="background-color: #f0f0f0; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
-            <strong>Selected return date:</strong> ${endDateString}
-        </div>
-        <p style="margin: 0 0 10px 0; font-size: 14px;">You must book exactly ${currentBookingDays} consecutive days. Your current selection only includes ${selectedDays} days.</p>
-        <p style="margin: 0; font-size: 14px;">Please select a return date that is exactly ${currentBookingDays} days after the pickup date.</p>
-      `;
-      showPopupWarning({title: warningTitle, body: warningBody});
-      
+      alert("Booking must be for exactly " + currentBookingDays + " calendar days.");
       dropoffDateInput.val("");
       return;
     }
