@@ -1,5 +1,5 @@
 jQuery(document).ready(function ($) {
-  if (typeof BOOKING_STRICT_RULE === "undefined") {
+  if (typeof BOOKING_STRICT_RULE === "undefined" || !BOOKING_STRICT_RULE.inventory_rules) {
     return;
   }
 
@@ -13,6 +13,21 @@ jQuery(document).ready(function ($) {
 
   const DATE_FORMAT = "d/m/Y";
   let lastWarningDate = null;
+  let currentBookingDays = null;
+
+  function updateBookingRule(inventoryId) {
+    if (
+      BOOKING_STRICT_RULE.inventory_rules &&
+      BOOKING_STRICT_RULE.inventory_rules[inventoryId]
+    ) {
+      currentBookingDays = parseInt(BOOKING_STRICT_RULE.inventory_rules[inventoryId].days, 10);
+    } else {
+      currentBookingDays = null; // No strict rule for this inventory
+    }
+    // Clear dates when the rule changes
+    pickupDateInput.val("");
+    dropoffDateInput.val("");
+  }
 
   function parseDate(dateString) {
     if (!dateString) return null;
@@ -46,6 +61,13 @@ jQuery(document).ready(function ($) {
   }
 
   function handleMobilePickupDateSelection(selectedDate) {
+    // If no strict rule is active for the current inventory, do nothing.
+    if (!currentBookingDays || currentBookingDays <= 0) {
+      pickupDateInput.val(formatDate(selectedDate));
+      pickupModalBody.hide();
+      return;
+    }
+
     const startDateString = formatDate(selectedDate);
     pickupDateInput.val(startDateString);
 
@@ -69,8 +91,9 @@ jQuery(document).ready(function ($) {
       return;
     }
     let isAvailable = true;
+    const fixedBookingNights = currentBookingDays - 1;
 
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= fixedBookingNights; i++) {
       let nextDate = new Date(startDate);
       nextDate.setDate(startDate.getDate() + i);
       if (disabledDates.includes(formatDate(nextDate))) {
@@ -83,7 +106,7 @@ jQuery(document).ready(function ($) {
       if (startDateString === lastWarningDate) return;
       lastWarningDate = startDateString;
       alert(
-        "The next 3 calendar days are not available. Please choose another pickup date."
+        "The next " + fixedBookingNights + " calendar days are not available. Please choose another pickup date."
       );
       pickupDateInput.val("");
       dropoffDateInput.val("");
@@ -92,16 +115,22 @@ jQuery(document).ready(function ($) {
 
     lastWarningDate = null;
     let returnDate = new Date(startDate);
-    returnDate.setDate(startDate.getDate() + 3);
+    returnDate.setDate(startDate.getDate() + fixedBookingNights);
     dropoffDateInput.val(formatDate(returnDate)).trigger("change");
     pickupModalBody.hide();
   }
 
   function handleMobileReturnDateValidation(selectedDate) {
-    const startDateString = pickupDateInput.val();
     const endDateString = formatDate(selectedDate);
     dropoffDateInput.val(endDateString);
+    
+    // If no strict rule is active for the current inventory, do nothing.
+    if (!currentBookingDays || currentBookingDays <= 0) {
+        dropoffModalBody.hide();
+        return;
+    }
 
+    const startDateString = pickupDateInput.val();
     if (!startDateString || !endDateString) {
       return;
     }
@@ -113,14 +142,29 @@ jQuery(document).ready(function ($) {
       return;
     }
 
+    const fixedBookingNights = currentBookingDays - 1;
     let diffDays = Math.ceil((endDate - startDate) / (1000 * 3600 * 24));
 
-    if (diffDays !== 3) {
-      alert("Booking must be for exactly 4 calendar days.");
+    if (diffDays !== fixedBookingNights) {
+      alert("Booking must be for exactly " + currentBookingDays + " calendar days.");
       dropoffDateInput.val("");
       return;
     }
     dropoffModalBody.hide();
+  }
+
+  // --- Initialize and add event listeners ---
+
+  // Listen for change on the inventory dropdown
+  $("#booking_inventory").on("change", function () {
+    const selectedInventoryId = $(this).val();
+    updateBookingRule(selectedInventoryId);
+  });
+
+  // Set the rule for the initially selected inventory on page load
+  const initialInventoryId = $("#booking_inventory").val();
+  if (initialInventoryId) {
+      updateBookingRule(initialInventoryId);
   }
 
   // --- Open the pickup modal ---

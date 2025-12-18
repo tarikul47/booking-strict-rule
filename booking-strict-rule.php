@@ -73,7 +73,7 @@ class Booking_Strict_Rule
             'inventory_rules' => $inventory_rules,
         ];
 
-        //print_r($booking_data);
+        print_r($booking_data);
 
         $script_handle = 'booking-strict-rule';
         $script_url = plugin_dir_url(__FILE__) . 'assets/js/booking-strict-rule.js';
