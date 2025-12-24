@@ -2,10 +2,10 @@ jQuery(document).ready(function ($) {
   // --- Popup Warning Modal ---
   const popupModal = `
     <div id="booking-warning-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10000;">
-      <div style="max-width:45%;position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #fff; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); min-width: 400px; text-align: left;">
+      <div style="max-width:45%;position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #fff; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 500px; text-align: left;">
         <h3 id="booking-warning-title" style="color: red; font-weight: bold; font-size: 20px; margin-top:0; margin-bottom: 15px;"></h3>
         <div id="booking-warning-message-body"></div>
-        <button id="booking-warning-close" style="background-color: #2563EB; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold;">Okay, verstanden.</button>
+        <button id="booking-warning-close" style="background-color: #2563EB; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold;">verstanden.</button>
       </div>
     </div>
   `;
@@ -45,6 +45,7 @@ jQuery(document).ready(function ($) {
 
   let lastWarningDate = null;
   let currentBookingDays = null;
+  let currentAllowedDays = [];
   const DATE_FORMAT = "d/m/Y";
 
   function updateBookingRule(inventoryId) {
@@ -56,8 +57,11 @@ jQuery(document).ready(function ($) {
         BOOKING_STRICT_RULE.inventory_rules[inventoryId].days,
         10
       );
+      currentAllowedDays =
+        BOOKING_STRICT_RULE.inventory_rules[inventoryId].allowed_days || [];
     } else {
       currentBookingDays = null; // No strict rule for this inventory
+      currentAllowedDays = [];
     }
     // Clear dates when the rule changes
     $("#pickup-date, #dropoff-date").val("");
@@ -99,17 +103,74 @@ jQuery(document).ready(function ($) {
     return DATE_FORMAT.replace("d", d).replace("m", m).replace("Y", y);
   }
 
-  function handlePickupDateSelection() {
-    // If no strict rule is active for the current inventory, do nothing.
-    if (!currentBookingDays || currentBookingDays <= 0) {
-      return;
-    }
+  function getDayKeyFromDate(dateObj) {
+    const days = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
 
+    return days[dateObj.getDay()];
+  }
+
+  function handlePickupDateSelection() {
     let startDateString = $("#pickup-date").val();
 
     if (!startDateString) {
       $("#dropoff-date").val("");
       $(".booking-pricing-info").fadeOut();
+      return;
+    }
+
+    let startDate = parseDate(startDateString);
+    if (!startDate) {
+      return;
+    }
+
+    // --- Start: New logic for allowed booking days ---
+    if (currentAllowedDays && currentAllowedDays.length > 0) {
+      const dayKey = getDayKeyFromDate(startDate);
+      if (!currentAllowedDays.includes(dayKey)) {
+        const daysMap = {
+          saturday: "Samstag",
+          sunday: "Sonntag",
+          monday: "Montag",
+          tuesday: "Dienstag",
+          wednesday: "Mittwoch",
+          thursday: "Donnerstag",
+          friday: "Freitag",
+        };
+
+        const selectedDayGerman = daysMap[dayKey] || dayKey;
+        const allowedDaysGerman = currentAllowedDays
+          .map((day) => daysMap[day] || day)
+          .join(", ");
+
+        const warningTitle = "Ungültiger Buchungstag";
+        const warningBody = `
+          <div style="background-color: #f0f0f0; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+              <strong>Ausgewähltes Datum:</strong> ${startDateString}
+          </div>
+          <p style="margin: 0 0 10px 0; font-size: 14px;">Das von Ihnen gewählte Datum ist ein ${selectedDayGerman}.</p>
+          <p style="margin: 0 0 10px 0; font-size: 14px;">Der Buchungsstart ist nur an den folgenden Tagen möglich: <strong>${allowedDaysGerman}</strong>.</p>
+          <p style="margin: 0; font-size: 14px;">Bitte wählen Sie ein gültiges Datum.</p>
+        `;
+
+        showPopupWarning({ title: warningTitle, body: warningBody });
+
+        $("#pickup-date, #dropoff-date").val("");
+        $(".booking-pricing-info").fadeOut();
+        return;
+      }
+    }
+    // --- End: New logic for allowed booking days ---
+
+    // If no strict rule is active for the current inventory, do nothing.
+    if (!currentBookingDays || currentBookingDays <= 0) {
       return;
     }
 
@@ -124,10 +185,8 @@ jQuery(document).ready(function ($) {
       disabledDates = disabledDates.concat(wpBookedDates);
     }
 
-    let startDate = parseDate(startDateString);
-    if (!startDate) {
-      return;
-    }
+    console.log("disabledDates", disabledDates);
+
     let isAvailable = true;
     const fixedBookingNights = currentBookingDays - 1;
 

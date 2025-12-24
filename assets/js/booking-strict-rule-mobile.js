@@ -5,7 +5,7 @@ jQuery(document).ready(function ($) {
       <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #fff; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 90%; width:90%; text-align: left;">
         <h3 id="booking-warning-title" style="color: red; font-weight: bold; font-size: 20px; margin-top:0; margin-bottom: 15px;"></h3>
         <div id="booking-warning-message-body"></div>
-        <button id="booking-warning-close" style="background-color: #2563EB; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold;">Okay, verstanden.</button>
+        <button id="booking-warning-close" style="background-color: #2563EB; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold;">verstanden.</button>
       </div>
     </div>
   `;

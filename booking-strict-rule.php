@@ -16,6 +16,8 @@ class Booking_Strict_Rule
 
     const META_KEY = '_redq_custom_checkbox';
     const DAYS_META_KEY = '_booking_strict_rule_days';
+    const DAYS_ALLOWED_META_KEY = '_booking_strict_rule_allowed_days';
+
 
     public function __construct()
     {
@@ -59,8 +61,15 @@ class Booking_Strict_Rule
             $is_enabled = get_post_meta($inventory_id, self::META_KEY, true);
             if ($is_enabled === 'yes') {
                 $days = get_post_meta($inventory_id, self::DAYS_META_KEY, true);
+                $allowed_days = get_post_meta($inventory_id,self::DAYS_ALLOWED_META_KEY, true);
+
+                if (!is_array($allowed_days)) {
+                    $allowed_days = [];
+                }
+
                 $inventory_rules[$inventory_id] = [
                     'days' => intval($days),
+                    'allowed_days' => array_values($allowed_days),
                 ];
             }
         }
@@ -72,6 +81,8 @@ class Booking_Strict_Rule
         $booking_data = [
             'inventory_rules' => $inventory_rules,
         ];
+
+        //print_r($booking_data);
 
         $script_handle = 'booking-strict-rule';
         $script_url = plugin_dir_url(__FILE__) . 'assets/js/booking-strict-rule.js';
@@ -118,21 +129,84 @@ class Booking_Strict_Rule
         wp_nonce_field('booking_strict_rule_save', 'booking_strict_rule_nonce');
 
         $is_enabled = get_post_meta($post->ID, self::META_KEY, true);
-        $days = get_post_meta($post->ID, self::DAYS_META_KEY, true);
+        $rule_days = get_post_meta($post->ID, self::DAYS_META_KEY, true);
+
+        $saved_days = get_post_meta($post->ID, self::DAYS_ALLOWED_META_KEY, true);
+        if (!is_array($saved_days)) {
+            $saved_days = [];
+        }
+
+        $days = [
+            'saturday' => 'Saturday',
+            'sunday' => 'Sunday',
+            'monday' => 'Monday',
+            'tuesday' => 'Tuesday',
+            'wednesday' => 'Wednesday',
+            'thursday' => 'Thursday',
+            'friday' => 'Friday',
+        ];
         ?>
-        <p>
-            <label>
+
+        <!-- Strict Rule Toggle -->
+        <div style="margin-bottom:10px;">
+            <label style="font-weight:600;">
                 <input type="checkbox" name="booking_strict_rule" value="yes" <?php checked($is_enabled, 'yes'); ?> />
                 <?php esc_html_e('Enable Strict Booking Rule', 'booking-strict-rule'); ?>
             </label>
-        </p>
-        <p>
-            <label for="booking_strict_rule_days"><?php esc_html_e('Number of Days:', 'booking-strict-rule'); ?></label>
+        </div>
+
+        <!-- Number of Days -->
+        <div style="margin-bottom:15px;">
+            <label for="booking_strict_rule_days" style="display:block;font-weight:600;margin-bottom:4px;">
+                <?php esc_html_e('Advance Booking Days', 'booking-strict-rule'); ?>
+            </label>
             <input type="number" id="booking_strict_rule_days" name="booking_strict_rule_days"
-                value="<?php echo esc_attr($days); ?>" min="1" />
-        </p>
+                value="<?php echo esc_attr($rule_days); ?>" min="1" style="width:100%;" />
+            <small style="color:#666;">How many days before booking is allowed</small>
+        </div>
+
+        <hr style="margin:12px 0;">
+
+        <!-- Allowed Days -->
+        <div>
+            <strong><?php esc_html_e('Allowed Booking Days', 'booking-strict-rule'); ?></strong>
+            <small style="display:block;color:#666;margin-bottom:8px;">
+                Select maximum 3 days
+            </small>
+
+            <div id="booking-strict-days-wrapper" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                <?php foreach ($days as $key => $label): ?>
+                    <label style="display:flex;align-items:center;gap:6px;">
+                        <input type="checkbox" class="booking-strict-day" name="booking_strict_days[]"
+                            value="<?php echo esc_attr($key); ?>" <?php checked(in_array($key, $saved_days)); ?>>
+                        <?php echo esc_html($label); ?>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <!-- UX Script -->
+        <script>
+            (function ($) {
+                function updateDayLimit() {
+                    const max = 3;
+                    const checkedCount = $('.booking-strict-day:checked').length;
+
+                    $('.booking-strict-day').each(function () {
+                        if (!this.checked) {
+                            $(this).prop('disabled', checkedCount >= max);
+                        }
+                    });
+                }
+
+                $(document).on('change', '.booking-strict-day', updateDayLimit);
+                $(document).ready(updateDayLimit);
+            })(jQuery);
+        </script>
+
         <?php
     }
+
 
     /**
      * Save metabox data
@@ -162,6 +236,14 @@ class Booking_Strict_Rule
             $days = intval($_POST['booking_strict_rule_days']);
             update_post_meta($post_id, self::DAYS_META_KEY, $days);
         }
+
+        if (isset($_POST['booking_strict_days']) && is_array($_POST['booking_strict_days'])) {
+            $days = array_slice(array_map('sanitize_text_field', $_POST['booking_strict_days']), 0, 3);
+            update_post_meta($post_id, self::DAYS_ALLOWED_META_KEY, $days);
+        } else {
+            delete_post_meta($post_id, self::DAYS_ALLOWED_META_KEY);
+        }
+
     }
 }
 
