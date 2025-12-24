@@ -49,6 +49,7 @@ jQuery(document).ready(function ($) {
   const DATE_FORMAT = "d/m/Y";
   let lastWarningDate = null;
   let currentBookingDays = null;
+  let currentAllowedDays = []; // Added this line
 
   function updateBookingRule(inventoryId) {
     if (
@@ -56,8 +57,10 @@ jQuery(document).ready(function ($) {
       BOOKING_STRICT_RULE.inventory_rules[inventoryId]
     ) {
       currentBookingDays = parseInt(BOOKING_STRICT_RULE.inventory_rules[inventoryId].days, 10);
+      currentAllowedDays = BOOKING_STRICT_RULE.inventory_rules[inventoryId].allowed_days || []; // Added this line
     } else {
       currentBookingDays = null; // No strict rule for this inventory
+      currentAllowedDays = []; // Added this line
     }
     // Clear dates when the rule changes
     pickupDateInput.val("");
@@ -95,19 +98,72 @@ jQuery(document).ready(function ($) {
     return DATE_FORMAT.replace("d", d).replace("m", m).replace("Y", y);
   }
 
-  function handleMobilePickupDateSelection(selectedDate) {
-    // If no strict rule is active for the current inventory, do nothing.
-    if (!currentBookingDays || currentBookingDays <= 0) {
-      pickupDateInput.val(formatDate(selectedDate));
-      pickupModalBody.hide();
-      return;
-    }
+  function getDayKeyFromDate(dateObj) {
+    const days = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
 
+    return days[dateObj.getDay()];
+  }
+
+  function handleMobilePickupDateSelection(selectedDate) {
     const startDateString = formatDate(selectedDate);
-    pickupDateInput.val(startDateString);
+    pickupDateInput.val(startDateString); // Update input field early
 
     if (!startDateString) {
       dropoffDateInput.val("");
+      return;
+    }
+
+    let startDate = parseDate(startDateString);
+    if (!startDate) {
+      return;
+    }
+
+    // --- Start: New logic for allowed booking days ---
+    if (currentAllowedDays && currentAllowedDays.length > 0) {
+      const dayKey = getDayKeyFromDate(startDate);
+      if (!currentAllowedDays.includes(dayKey)) {
+        const daysMap = {
+          saturday: "Samstag",
+          sunday: "Sonntag",
+          monday: "Montag",
+          tuesday: "Dienstag",
+          wednesday: "Mittwoch",
+          thursday: "Donnerstag",
+          friday: "Freitag",
+        };
+
+        const selectedDayGerman = daysMap[dayKey] || dayKey;
+        const allowedDaysGerman = currentAllowedDays
+          .map((day) => daysMap[day] || day)
+          .join(", ");
+
+        const warningTitle = "Ungültiger Buchungstag";
+        const warningBody = `
+          <p style="margin: 0 0 10px 0; font-size: 14px;">Das von Ihnen gewählte Datum (${startDateString}) ist ein ${selectedDayGerman}.</p>
+          <p style="margin: 0 0 10px 0; font-size: 14px;">Buchungen sind nur an folgenden Tagen möglich: <strong>${allowedDaysGerman}</strong>.</p>
+          <p style="margin: 0; font-size: 14px;">Bitte wählen Sie ein gültiges Datum.</p>
+        `;
+
+        showPopupWarning({ title: warningTitle, body: warningBody });
+
+        pickupDateInput.val("");
+        dropoffDateInput.val("");
+        return;
+      }
+    }
+    // --- End: New logic for allowed booking days ---
+
+    // If no strict rule is active for the current inventory, do nothing.
+    if (!currentBookingDays || currentBookingDays <= 0) {
+      pickupModalBody.hide();
       return;
     }
 
@@ -121,10 +177,6 @@ jQuery(document).ready(function ($) {
       disabledDates = disabledDates.concat(wpBookedDates);
     }
 
-    let startDate = parseDate(startDateString);
-    if (!startDate) {
-      return;
-    }
     let isAvailable = true;
     const fixedBookingNights = currentBookingDays - 1;
 
@@ -140,7 +192,7 @@ jQuery(document).ready(function ($) {
     if (!isAvailable) {
       if (startDateString === lastWarningDate) return;
       lastWarningDate = startDateString;
-      
+
       const warningTitle = "Datum nicht verfügbar";
       const warningBody = `
         <div style="background-color: #f0f0f0; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
